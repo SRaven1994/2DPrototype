@@ -27,6 +27,8 @@ class FirstScene extends BaseScene {
     score = 0
     /** @type {number}*/
     health = 3
+    /** @type {boolean} */
+    keyCollected = false
     /** @type {Phaser.Input.Keyboard.Key} */
     KeyW
     /** @type {Phaser.Input.Keyboard.Key} */
@@ -144,11 +146,11 @@ class FirstScene extends BaseScene {
         // Exit Level Layer
         // this.foregroundlayer.setTileIndexCallback(656, this.doorToLevel2, this)
         // Collect Key item Layer
-        // this.foregroundlayer.setTileIndexCallback(634, this.CollectKey, this)
+        this.foregroundlayer.setTileIndexCallback(634, this.collectKey, this)
         // Collect Speed Up Item Layer
-        // this.foregroundlayer.setTileIndexCallback(466, this.GainSpeedUp, this)
+        this.foregroundlayer.setTileIndexCallback(466, this.gainSpeedUp, this)
         // Collect Health Item Layer
-        // this.foregroundlayer.setTileIndexCallback(467, this.GainHealth, this)
+        this.foregroundlayer.setTileIndexCallback(467, this.gainHealth, this)
         // Debugging for TileIndex
         this.physics.add.overlap(this.player, this.foregroundlayer)
         this.physics.add.overlap(this.player, this.foregroundlayer, this.getOverlapTileIndex, null, this)
@@ -277,7 +279,7 @@ class FirstScene extends BaseScene {
             this.gameOverText.setText("Game Over")
         }
     }
-
+    // Add Score
     collectCoin(player, coins) {
         coins.disableBody(true, true)
         this.score += 1
@@ -288,6 +290,21 @@ class FirstScene extends BaseScene {
         console.log(tile.index)
 
     }
+    // Collect Key
+    collectKey(player, tile){
+        this.foregroundlayer.removeTileAt(tile.x, tile.y)
+        this.keyCollected = true
+    }
+    // Add Health
+    gainHealth(player, tile){
+        if (this.health < 3){
+            this.foregroundlayer.removeTileAt(tile.x, tile.y)
+            this.health += 1
+            this.healthText.setText("Health: " + this.health)
+        }
+
+    }
+    // Decrease Health
     triggerDamage(player, tile) {
         if (!this.player.takeDamage) {
             this.health -= 1
@@ -295,6 +312,14 @@ class FirstScene extends BaseScene {
             this.player.takeDamage = true
             setTimeout(() => { this.player.takeDamage = false }, 1000);
         }
+    }
+    gainSpeedUp(player, tile) {
+        if (!this.speedup) {
+            this.foregroundlayer.removeTileAt(tile.x, tile.y)
+            this.speedup = true
+            setTimeout(() => { this.speedup = false }, 5000);
+        }
+
     }
     // doorToLevel2() {
     //     if (this.KeyEnter.isDown)
