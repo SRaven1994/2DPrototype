@@ -3,25 +3,29 @@ class FirstScene extends BaseScene {
     map
     /** @type {CustomSprite} */
     player
-    /** @type {CustomSprite} */
-    bullet
     /** @type {object} */
     playerStartPoint
     /** @type  {Phaser.Types.Input.Keyboard.CursorKeys} */
     cursors
     /** @type  {Phaser.Cameras.Scene2D.Camera} */
     camera
-    /**@type {Phaser.Physics.Arcade.Group} */
+    /**@type {Phaser.Physics.Arcade.StaticGroup} */
     coins
-    /**@type {Phaser.GameObjects.Text} */
+    /** @type {Phaser.Physics.Arcade.Group} */
+    normalEnemies
+    /** @type {Phaser.Physics.Arcade.Group} */
+    flyingEnemies
+    /** @type {Phaser.Physics.Arcade.Collider} */
+    EnemiesCollider
+    /** @type {Phaser.GameObjects.Text} */
     scoreText
-    /**@type {Phaser.GameObjects.Text} */
+    /** @type {Phaser.GameObjects.Text} */
     healthText
-    /**@type {Phaser.GameObjects.Text} */
+    /** @type {Phaser.GameObjects.Text} */
     gameOverText
-    /**@type {number}*/
+    /** @type {number}*/
     score = 0
-    /**@type {number}*/
+    /** @type {number}*/
     health = 3
     /** @type {Phaser.Input.Keyboard.Key} */
     KeyW
@@ -38,53 +42,118 @@ class FirstScene extends BaseScene {
     }
     preload() {
         super.preload()
-        //load json tile
-        this.load.tilemapTiledJSON("level1", "assets/level1a.json")
+        // Load json tile
+        this.load.tilemapTiledJSON("level1", "assets/level1.json")
     }
     create() {
-        //create tiles
+        // Create Tiles
         this.map = this.make.tilemap({ key: "level1" })
         const landscape = this.map.addTilesetImage("grass-building-tileset", "grass-building-tileset")
         const sky = this.map.addTilesetImage("grass-sky-tileset", "grass-sky-tileset")
         const props = this.map.addTilesetImage("props-tileset", "props-tileset")
         const pickuplayer = this.map.addTilesetImage("items", "items")
-        //set world bounds
+        // Set world bounds
         this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
-        // create background/platform layers
+        // Create background/platform layers
         this.map.createLayer("background", [landscape, sky, props, pickuplayer], 0, 0)
         this.map.createLayer("midground", [landscape, sky, props, pickuplayer], 0, 0)
         this.map.createLayer("platforms", [landscape, sky, props, pickuplayer], 0, 0)
-        //Create player
-        // this.playerStartPoint = FirstScene.FindPoint(this.map)
-        this.player = new CustomSprite(this, 10, 360, 'player')
+        // Create player
+        this.playerStartPoint = FirstScene.FindPoint(this.map, "objects", "player", "playerSpawn")
+        this.player = new CustomSprite(this, this.playerStartPoint.x, this.playerStartPoint.y, 'player')
         this.player.setSize(16, 16);
-        //Collison
+        // Collison
         const collisionLayer = this.map.getLayer("platforms").tilemapLayer
         collisionLayer.setCollisionBetween(0, 1000)
         this.physics.add.collider(this.player, collisionLayer)
-        //AmmoSpawning
+        // Ammo Spawning
 
-
-        //Coins
-        this.coins = this.physics.add.group({
-            key: "Coin",
-            collideWorldBounds: true,
-            repeat: 31,
-            setXY: {
-                x: 5,
-                y: 0,
-                stepX: 20
-            }
-        })
-        this.physics.add.collider(this.coins, collisionLayer)
-        // add layer
+        // Enemy Animations
+        this.anims.create({
+            key: 'enemywalk',
+            frames: this.anims.generateFrameNumbers('normalEnemy', { start: 0, end: 1 }),
+            frameRate: 5,
+            repeat: -1
+        });
+        this.anims.create({
+            key: "enemyFly",
+            frames: this.anims.generateFrameNumbers('flyingEnemy', { start: 0, end: 1 }),
+            frameRate: 5,
+            repeat: -1
+        })       
+        // Spawn Normal Enemies
+        this.normalEnemies = this.physics.add.group()
+        let normalPoints = FirstScene.FindPoints(this.map, "objects", "normalEnemy")
+        let normalLen = normalPoints.length / 2
+        let normalSpawn
+        let normalDest
+        let normalLine
+        let normal
+        for (let i = 1; i <= normalLen; i++){
+            normalSpawn = FirstScene.FindPoint(this.map, "objects", "normalEnemy", "normalSpawn" + i)
+            normalDest = FirstScene.FindPoint(this.map, "objects", "normalEnemy", "normalDest" + i)
+            normalLine = new Phaser.Curves.Path(normalSpawn.x, normalSpawn.y).lineTo(normalDest.x, normalDest.y)
+            normal = this.add.follower(normalLine, normalSpawn.x, normalSpawn.y, "normalEnemy")
+            normal.startFollow({
+                duration: Phaser.Math.Between(1500, 2500),
+                repeat: -1,
+                yoyo: true,
+                ease: "Sine.easeInOut"
+            })
+            normal.anims.play("enemywalk", true)
+            this.normalEnemies.add(normal)
+            normal.body.allowGravity = false
+        }
+        this.EnemiesCollider = this.physics.add.overlap(this.player, this.normalEnemies, this.triggerDamage, null, this)        
+        // Spawn Flying Enemeis
+        this.flyingEnemies = this.physics.add.group()
+        let flyingPoints = FirstScene.FindPoints(this.map, "objects", "flyingEnemy")
+        let flyingLen = flyingPoints.length / 2
+        let flyingSpawn
+        let flyingDest
+        let flyingLine
+        let flying
+        for (let i = 1; i <= flyingLen; i++){
+            flyingSpawn = FirstScene.FindPoint(this.map, "objects", "flyingEnemy", "flyingSpawn" + i)
+            flyingDest = FirstScene.FindPoint(this.map, "objects", "flyingEnemy", "flyingDest" + i)
+            flyingLine = new Phaser.Curves.Path(flyingSpawn.x, flyingSpawn.y).lineTo(flyingDest.x, flyingDest.y)
+            flying = this.add.follower(flyingLine, flyingSpawn.x, flyingSpawn.y, "flyingEnemy")
+            flying.startFollow({
+                duration: Phaser.Math.Between(1500, 2500),
+                repeat: -1,
+                yoyo: true,
+                ease:"Sine.easeInOut"
+            })
+            flying.anims.play("enemyFly", true)
+            this.flyingEnemies.add(flying)
+            flying.body.allowGravity = false
+        }
+        this.EnemiesCollider = this.physics.add.overlap(this.player, this.flyingEnemies, this.triggerDamage, null, this)        
+        // Score Items
+        let coinPoints = FirstScene.FindPoints(this.map, "objects", "coin")
+        this.coins = this.physics.add.staticGroup()
+        for (let point, i = 0; i < coinPoints.length; i++) {
+            point = coinPoints[i]
+            this.coins.create(point.x, point.y, "Coin")
+        }
+        // Add Layer
         this.foregroundlayer = this.map.createLayer("foreground", [landscape, sky, props, pickuplayer], 0, 0)
         this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this)
-        // this.foregroundlayer.setTileIndexCallback(167, this.resetPlayerPostition, this)
-        // this.foregroundlayer.setTileIndexCallback(208, this.doorToLevel2, this)
+        // Spike Damage Layer
+        this.foregroundlayer.setTileIndexCallback(799, this.triggerDamage, this)
+        // Exit Level Layer
+        // this.foregroundlayer.setTileIndexCallback(656, this.doorToLevel2, this)
+        // Collect Key item Layer
+        // this.foregroundlayer.setTileIndexCallback(634, this.CollectKey, this)
+        // Collect Speed Up Item Layer
+        // this.foregroundlayer.setTileIndexCallback(466, this.GainSpeedUp, this)
+        // Collect Health Item Layer
+        // this.foregroundlayer.setTileIndexCallback(467, this.GainHealth, this)
+        // Debugging for TileIndex
         this.physics.add.overlap(this.player, this.foregroundlayer)
-        this.speedup = false
         this.physics.add.overlap(this.player, this.foregroundlayer, this.getOverlapTileIndex, null, this)
+        this.speedup = false
+        // Player Animations
         this.anims.create({
             key: 'walk',
             frames: this.anims.generateFrameNumbers('player', { start: 1, end: 4 }),
@@ -107,10 +176,13 @@ class FirstScene extends BaseScene {
             frames: [{ key: 'player', frame: 2 }],
             frameRate: 15
         });
+        // World Boundary
         this.player.setCollideWorldBounds(true)
+        // Camera
         this.camera = this.cameras.getCamera("")
         this.camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
         this.camera.startFollow(this.player)
+        // UI
         this.scoreText = this.add.text(75, 16, "Score: 0", {
             fontSize: "16px",
             color: "#FFFFFF",
@@ -141,6 +213,7 @@ class FirstScene extends BaseScene {
 
     update() {
         //Check arrow keys
+        //Speed Active
         if (this.speedup && !this.gameOver) {
             if (this.cursors.right.isDown || this.KeyD.isDown) {
                 this.player.setVelocityX(200)
@@ -157,6 +230,7 @@ class FirstScene extends BaseScene {
                 this.player.anims.play('idle', true)
             }
         }
+        // Speed not Active
         if (!this.speedup && !this.gameOver) {
             if (this.cursors.right.isDown || this.KeyD.isDown) {
                 this.player.setVelocityX(100)
@@ -203,52 +277,47 @@ class FirstScene extends BaseScene {
             this.gameOverText.setText("Game Over")
         }
     }
-    /**@param {CustomSprite} player */
-    /**@param {Phaser.Physics.Arcade.Image} coins*/
+
     collectCoin(player, coins) {
         coins.disableBody(true, true)
         this.score += 1
         this.scoreText.setText("Score: " + this.score)
-        if (this.coins.countActive(true) === 0) {
-            //access scene manager
-            this.scene.start("Scene2", { score: this.score, health: this.health })
-        }
-
     }
+    // Debugging Purposes for foreground tiles
     getOverlapTileIndex(player, tile) {
         console.log(tile.index)
 
     }
-    // resetPlayerPostition(player, tile) {
-    //     if (!this.player.takeDamage) {
-    //         this.player.setPosition(256, 300)
-    //         this.health -= 1
-    //         this.healthText.setText("Health: " + this.health)
-    //         this.player.takeDamage = true
-    //         setTimeout(() => { this.player.takeDamage = false }, 1000);
-    //     }
-
-    // }
+    triggerDamage(player, tile) {
+        if (!this.player.takeDamage) {
+            this.health -= 1
+            this.healthText.setText("Health: " + this.health)
+            this.player.takeDamage = true
+            setTimeout(() => { this.player.takeDamage = false }, 1000);
+        }
+    }
     // doorToLevel2() {
     //     if (this.KeyEnter.isDown)
     //         setTimeout(() => { this.scene.start("Scene2", { score: this.score, health: this.health }) }, 100);
     // }
-  static FindPoint(map, layer, type, name) {
-    var loc = map.findObject(layer, function (object) {
-      if (object.type === type && object.name === name) {
-        return object
-      }
-    })
-    return loc
-  }
-  static FindPoints(map, layer, type) {
-    var locs = map.filterObjects(layer, function (object) {
-      if (object.type === type) {
-        return object
-      }
-    })
-    return locs
-  }
+
+    // Spawn Objects on Point
+    static FindPoint(map, layer, type, name) {
+        var loc = map.findObject(layer, function (object) {
+            if (object.type === type && object.name === name) {
+                return object
+            }
+        })
+        return loc
+    }
+    static FindPoints(map, layer, type) {
+        var locs = map.filterObjects(layer, function (object) {
+            if (object.type === type) {
+                return object
+            }
+        })
+        return locs
+    }
 
 
 }
