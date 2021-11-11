@@ -1,6 +1,7 @@
 class CustomSprite extends Phaser.Physics.Arcade.Sprite {
   jumpCount = 0
   takeDamage = false
+  FaceLeft = false
   /**
     * @param {Phaser.Scene} scene
     * @param {number} x

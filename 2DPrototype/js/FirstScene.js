@@ -5,6 +5,8 @@ class FirstScene extends BaseScene {
     player
     /** @type {object} */
     playerStartPoint
+    /** @type {object} */
+    bulletsPlayer
     /** @type  {Phaser.Types.Input.Keyboard.CursorKeys} */
     cursors
     /** @type  {Phaser.Cameras.Scene2D.Camera} */
@@ -69,7 +71,15 @@ class FirstScene extends BaseScene {
         collisionLayer.setCollisionBetween(0, 1000)
         this.physics.add.collider(this.player, collisionLayer)
         // Ammo Spawning
-
+        
+        // Bullet
+        this.bulletsPlayer = this.physics.add.group({
+            defaultKey: "bullet",
+            collideWorldBounds: true,
+            maxSize: 3
+        })
+        this.physics.add.collider(this.bulletsPlayer, collisionLayer, this.destoryBulletCollide, null, this)
+        // this.physics.add.collider(this.bulletsPlayer, this.destoryBulletCollide, null, this) 
         // Enemy Animations
         this.anims.create({
             key: 'enemywalk',
@@ -106,6 +116,7 @@ class FirstScene extends BaseScene {
             this.normalEnemies.add(normal)
             normal.body.allowGravity = false
         }
+        this.physics.add.overlap(this.bulletsPlayer, this.normalEnemies, this.destoryNormalEnemy, null, this)
         this.EnemiesCollider = this.physics.add.overlap(this.player, this.normalEnemies, this.triggerDamage, null, this)        
         // Spawn Flying Enemeis
         this.flyingEnemies = this.physics.add.group()
@@ -131,6 +142,7 @@ class FirstScene extends BaseScene {
             flying.body.allowGravity = false
         }
         this.EnemiesCollider = this.physics.add.overlap(this.player, this.flyingEnemies, this.triggerDamage, null, this)        
+        this.physics.add.overlap(this.bulletsPlayer, this.flyingEnemies, this.destoryFlyingEnemy, null, this)
         // Score Items
         let coinPoints = FirstScene.FindPoints(this.map, "objects", "coin")
         this.coins = this.physics.add.staticGroup()
@@ -209,6 +221,7 @@ class FirstScene extends BaseScene {
         this.KeyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
         this.KeyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
         this.KeyEnter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
+        this.input.on('pointerdown', this.fireBullet, this)
         this.cursors = this.input.keyboard.createCursorKeys()
     }
 
@@ -249,6 +262,7 @@ class FirstScene extends BaseScene {
                 this.player.anims.play('idle', true)
             }
         }
+        
         //Power Up Effects
         if (this.speedup) {
             this.player.setTint(0x33FFFF)
@@ -304,6 +318,16 @@ class FirstScene extends BaseScene {
         }
 
     }
+    // Fire Bullets
+    fireBullet(){
+        let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
+        if(bulletPlayer){
+            bulletPlayer.setActive(true);
+            bulletPlayer.setVisible(true);
+            this.physics.velocityFromRotation(bulletPlayer.rotation, 100, bulletPlayer.body.velocity);
+            bulletPlayer.body.allowGravity = false
+        }
+    }
     // Decrease Health
     triggerDamage(player, tile) {
         if (!this.player.takeDamage) {
@@ -313,6 +337,7 @@ class FirstScene extends BaseScene {
             setTimeout(() => { this.player.takeDamage = false }, 1000);
         }
     }
+    // Enable Speed Up
     gainSpeedUp(player, tile) {
         if (!this.speedup) {
             this.foregroundlayer.removeTileAt(tile.x, tile.y)
@@ -320,6 +345,18 @@ class FirstScene extends BaseScene {
             setTimeout(() => { this.speedup = false }, 5000);
         }
 
+    }
+    destoryNormalEnemy(bulletPlayer, normalEnemies){
+        this.bulletsPlayer.killAndHide(bulletPlayer)
+        this.normalEnemies.remove(normalEnemies, true, true)
+    }
+    destoryFlyingEnemy(bulletPlayer, flyingEnemies){
+        this.bulletsPlayer.killAndHide(bulletPlayer)
+        this.flyingEnemies.remove(flyingEnemies, true, true)
+    }
+    // Destory Bullet on Platform
+    destoryBulletCollide(bulletPlayer, collisionLayer){
+        this.bulletsPlayer.killAndHide(bulletPlayer)
     }
     // doorToLevel2() {
     //     if (this.KeyEnter.isDown)
