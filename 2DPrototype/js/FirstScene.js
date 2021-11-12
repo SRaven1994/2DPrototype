@@ -71,7 +71,7 @@ class FirstScene extends BaseScene {
         collisionLayer.setCollisionBetween(0, 1000)
         this.physics.add.collider(this.player, collisionLayer)
         // Ammo Spawning
-        
+
         // Bullet
         this.bulletsPlayer = this.physics.add.group({
             defaultKey: "bullet",
@@ -79,7 +79,7 @@ class FirstScene extends BaseScene {
             maxSize: 3
         })
         this.physics.add.collider(this.bulletsPlayer, collisionLayer, this.destoryBulletCollide, null, this)
-        // this.physics.add.collider(this.bulletsPlayer, this.destoryBulletCollide, null, this) 
+        this.physics.world.on('worldbounds', this.worldBoundsBullet, this)
         // Enemy Animations
         this.anims.create({
             key: 'enemywalk',
@@ -92,7 +92,7 @@ class FirstScene extends BaseScene {
             frames: this.anims.generateFrameNumbers('flyingEnemy', { start: 0, end: 1 }),
             frameRate: 5,
             repeat: -1
-        })       
+        })
         // Spawn Normal Enemies
         this.normalEnemies = this.physics.add.group()
         let normalPoints = FirstScene.FindPoints(this.map, "objects", "normalEnemy")
@@ -101,7 +101,7 @@ class FirstScene extends BaseScene {
         let normalDest
         let normalLine
         let normal
-        for (let i = 1; i <= normalLen; i++){
+        for (let i = 1; i <= normalLen; i++) {
             normalSpawn = FirstScene.FindPoint(this.map, "objects", "normalEnemy", "normalSpawn" + i)
             normalDest = FirstScene.FindPoint(this.map, "objects", "normalEnemy", "normalDest" + i)
             normalLine = new Phaser.Curves.Path(normalSpawn.x, normalSpawn.y).lineTo(normalDest.x, normalDest.y)
@@ -117,7 +117,7 @@ class FirstScene extends BaseScene {
             normal.body.allowGravity = false
         }
         this.physics.add.overlap(this.bulletsPlayer, this.normalEnemies, this.destoryNormalEnemy, null, this)
-        this.EnemiesCollider = this.physics.add.overlap(this.player, this.normalEnemies, this.triggerDamage, null, this)        
+        this.EnemiesCollider = this.physics.add.overlap(this.player, this.normalEnemies, this.triggerDamage, null, this)
         // Spawn Flying Enemeis
         this.flyingEnemies = this.physics.add.group()
         let flyingPoints = FirstScene.FindPoints(this.map, "objects", "flyingEnemy")
@@ -126,7 +126,7 @@ class FirstScene extends BaseScene {
         let flyingDest
         let flyingLine
         let flying
-        for (let i = 1; i <= flyingLen; i++){
+        for (let i = 1; i <= flyingLen; i++) {
             flyingSpawn = FirstScene.FindPoint(this.map, "objects", "flyingEnemy", "flyingSpawn" + i)
             flyingDest = FirstScene.FindPoint(this.map, "objects", "flyingEnemy", "flyingDest" + i)
             flyingLine = new Phaser.Curves.Path(flyingSpawn.x, flyingSpawn.y).lineTo(flyingDest.x, flyingDest.y)
@@ -135,13 +135,13 @@ class FirstScene extends BaseScene {
                 duration: Phaser.Math.Between(1500, 2500),
                 repeat: -1,
                 yoyo: true,
-                ease:"Sine.easeInOut"
+                ease: "Sine.easeInOut"
             })
             flying.anims.play("enemyFly", true)
             this.flyingEnemies.add(flying)
             flying.body.allowGravity = false
         }
-        this.EnemiesCollider = this.physics.add.overlap(this.player, this.flyingEnemies, this.triggerDamage, null, this)        
+        this.EnemiesCollider = this.physics.add.overlap(this.player, this.flyingEnemies, this.triggerDamage, null, this)
         this.physics.add.overlap(this.bulletsPlayer, this.flyingEnemies, this.destoryFlyingEnemy, null, this)
         // Score Items
         let coinPoints = FirstScene.FindPoints(this.map, "objects", "coin")
@@ -262,7 +262,6 @@ class FirstScene extends BaseScene {
                 this.player.anims.play('idle', true)
             }
         }
-        
         //Power Up Effects
         if (this.speedup) {
             this.player.setTint(0x33FFFF)
@@ -305,13 +304,13 @@ class FirstScene extends BaseScene {
 
     }
     // Collect Key
-    collectKey(player, tile){
+    collectKey(player, tile) {
         this.foregroundlayer.removeTileAt(tile.x, tile.y)
         this.keyCollected = true
     }
     // Add Health
-    gainHealth(player, tile){
-        if (this.health < 3){
+    gainHealth(player, tile) {
+        if (this.health < 3) {
             this.foregroundlayer.removeTileAt(tile.x, tile.y)
             this.health += 1
             this.healthText.setText("Health: " + this.health)
@@ -319,13 +318,21 @@ class FirstScene extends BaseScene {
 
     }
     // Fire Bullets
-    fireBullet(){
+    fireBullet() {
         let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
-        if(bulletPlayer){
+        if (bulletPlayer && !this.player.flipX) {
             bulletPlayer.setActive(true);
             bulletPlayer.setVisible(true);
             this.physics.velocityFromRotation(bulletPlayer.rotation, 100, bulletPlayer.body.velocity);
+            bulletPlayer.body.onWorldBounds = true;
             bulletPlayer.body.allowGravity = false
+        } else {
+            bulletPlayer.setActive(true);
+            bulletPlayer.setVisible(true);
+            this.physics.velocityFromRotation(bulletPlayer.rotation, -100, bulletPlayer.body.velocity);
+            bulletPlayer.body.onWorldBounds = true;
+            bulletPlayer.body.allowGravity = false
+
         }
     }
     // Decrease Health
@@ -346,17 +353,22 @@ class FirstScene extends BaseScene {
         }
 
     }
-    destoryNormalEnemy(bulletPlayer, normalEnemies){
+    // Destory Enemies
+    destoryNormalEnemy(bulletPlayer, normalEnemies) {
         this.bulletsPlayer.killAndHide(bulletPlayer)
         this.normalEnemies.remove(normalEnemies, true, true)
     }
-    destoryFlyingEnemy(bulletPlayer, flyingEnemies){
+    destoryFlyingEnemy(bulletPlayer, flyingEnemies) {
         this.bulletsPlayer.killAndHide(bulletPlayer)
         this.flyingEnemies.remove(flyingEnemies, true, true)
     }
     // Destory Bullet on Platform
-    destoryBulletCollide(bulletPlayer, collisionLayer){
+    destoryBulletCollide(bulletPlayer, collisionLayer) {
         this.bulletsPlayer.killAndHide(bulletPlayer)
+    }
+    // Destory Bullet on World Bound
+    worldBoundsBullet(body) {
+        this.bulletsPlayer.killAndHide(body.gameObject)
     }
     // doorToLevel2() {
     //     if (this.KeyEnter.isDown)
