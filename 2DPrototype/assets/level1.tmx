@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.5" tiledversion="1.7.2" orientation="orthogonal" renderorder="right-down" width="100" height="25" tilewidth="16" tileheight="16" infinite="0" nextlayerid="8" nextobjectid="87">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="100" height="25" tilewidth="16" tileheight="16" infinite="0" nextlayerid="8" nextobjectid="87">
  <editorsettings>
   <export target="level1.json" format="json"/>
  </editorsettings>
@@ -107,19 +107,19 @@
    <point/>
   </object>
   <object id="5" name="exitLevel" type="exit" x="1568" y="80" width="16" height="32"/>
-  <object id="6" name="pistolAmmo" type="pistol" x="144" y="304">
+  <object id="6" name="pistolAmmo" type="pistol" x="144" y="296">
    <point/>
   </object>
-  <object id="7" name="shotgunAmmo" type="shotgun" x="1424" y="80">
+  <object id="7" name="shotgunAmmo" type="shotgun" x="1424" y="72">
    <point/>
   </object>
   <object id="8" name="shotgunAmmo" type="shotgun" x="456" y="72">
    <point/>
   </object>
-  <object id="9" name="smgAmmo" type="smg" x="456" y="304">
+  <object id="9" name="smgAmmo" type="smg" x="456" y="296">
    <point/>
   </object>
-  <object id="10" name="smgAmmo" type="smg" x="1168" y="384">
+  <object id="10" name="smgAmmo" type="smg" x="1168" y="376">
    <point/>
   </object>
   <object id="11" name="normalSpawn1" type="normalEnemy" x="284" y="376">
@@ -200,10 +200,10 @@
   <object id="36" name="flyingDest5" type="flyingEnemy" x="800" y="48">
    <point/>
   </object>
-  <object id="37" name="pistolAmmo" type="pistol" x="544" y="384">
+  <object id="37" name="pistolAmmo" type="pistol" x="544" y="376">
    <point/>
   </object>
-  <object id="38" name="shotgunAmmo" type="shotgun" x="1316" y="288">
+  <object id="38" name="shotgunAmmo" type="shotgun" x="1316" y="280">
    <point/>
   </object>
   <object id="39" name="coin" type="coin" x="72" y="216">

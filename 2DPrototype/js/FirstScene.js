@@ -13,6 +13,12 @@ class FirstScene extends BaseScene {
     camera
     /**@type {Phaser.Physics.Arcade.StaticGroup} */
     coins
+    /**@type {Phaser.Physics.Arcade.StaticGroup} */
+    pistolAmmoBox
+    /**@type {Phaser.Physics.Arcade.StaticGroup} */
+    smgAmmoBox
+    /**@type {Phaser.Physics.Arcade.StaticGroup} */
+    shotgunAmmoBox        
     /** @type {Phaser.Physics.Arcade.Group} */
     normalEnemies
     /** @type {Phaser.Physics.Arcade.Group} */
@@ -25,12 +31,36 @@ class FirstScene extends BaseScene {
     healthText
     /** @type {Phaser.GameObjects.Text} */
     gameOverText
+    /** @type {Phaser.GameObjects.Text} */
+    ammoText
+    /** @type {Phaser.GameObjects.Image} */
+    instructionScreen
+    /** @type {Phaser.GameObjects.Image} */
+    endScreen
+    /** @type {Phaser.GameObjects.Image} */
+    hasKey
+    /** @type {Phaser.GameObjects.Image} */
+    pistolIcon
+    /** @type {Phaser.GameObjects.Image} */
+    smgIcon
+    /** @type {Phaser.GameObjects.Image} */
+    shotgunIcon
+    /** @type {number}*/
+    pistolAmmo = 10
+    /** @type {number}*/
+    smgAmmo = 0
+    /** @type {number}*/
+    shotgunAmmo = 0
     /** @type {number}*/
     score = 0
     /** @type {number}*/
     health = 3
+    /** @type {number}*/
+    firingMode = 1
     /** @type {boolean} */
     keyCollected = false
+    /** @type {boolean} */
+    startGame = false
     /** @type {Phaser.Input.Keyboard.Key} */
     KeyW
     /** @type {Phaser.Input.Keyboard.Key} */
@@ -41,6 +71,12 @@ class FirstScene extends BaseScene {
     KeyD
     /** @type {Phaser.Input.Keyboard.Key} */
     KeyEnter
+    /** @type {Phaser.Input.Keyboard.Key} */
+    Key1
+    /** @type {Phaser.Input.Keyboard.Key} */
+    Key2
+    /** @type {Phaser.Input.Keyboard.Key} */
+    Key3
     constructor() {
         super('Scene1')
     }
@@ -71,12 +107,32 @@ class FirstScene extends BaseScene {
         collisionLayer.setCollisionBetween(0, 1000)
         this.physics.add.collider(this.player, collisionLayer)
         // Ammo Spawning
-
+        let pistolPoints = FirstScene.FindPoints(this.map, "objects", "pistol")
+        this.pistolAmmoBox = this.physics.add.staticGroup()
+        for (let point, i = 0; i < pistolPoints.length; i++) {
+            point = pistolPoints[i]
+            this.pistolAmmoBox.create(point.x, point.y, "pistolAmmobox")
+        }
+        this.physics.add.overlap(this.player, this.pistolAmmoBox, this.collectPistolAmmo, null, this)
+        let smgPoints = FirstScene.FindPoints(this.map, "objects", "smg")
+        this.smgAmmoBox = this.physics.add.staticGroup()
+        for (let point, i = 0; i < smgPoints.length; i++){
+            point = smgPoints[i]
+            this.smgAmmoBox.create(point.x, point.y, "smgAmmobox")
+        }
+        this.physics.add.overlap(this.player, this.smgAmmoBox, this.collectSmgAmmo, null, this)
+        let shotgunPoints = FirstScene.FindPoints(this.map, "objects", "shotgun")
+        this.shotgunAmmoBox = this.physics.add.staticGroup()
+        for (let point, i = 0; i < shotgunPoints.length; i++){
+            point = shotgunPoints[i]
+            this.shotgunAmmoBox.create(point.x, point.y, "shotgunAmmobox")
+        }
+        this.physics.add.overlap(this.player, this.shotgunAmmoBox, this.collectShotgunAmmo, null, this)
         // Bullet
         this.bulletsPlayer = this.physics.add.group({
             defaultKey: "bullet",
             collideWorldBounds: true,
-            maxSize: 3
+            maxSize: 10000
         })
         this.physics.add.collider(this.bulletsPlayer, collisionLayer, this.destoryBulletCollide, null, this)
         this.physics.world.on('worldbounds', this.worldBoundsBullet, this)
@@ -110,6 +166,9 @@ class FirstScene extends BaseScene {
                 duration: Phaser.Math.Between(1500, 2500),
                 repeat: -1,
                 yoyo: true,
+                onYoyo: function () { this.flipX = !this.flipX },
+                onRepeat: function () { this.flipX = !this.flipX },
+                callbackScope: normal,
                 ease: "Sine.easeInOut"
             })
             normal.anims.play("enemywalk", true)
@@ -150,13 +209,13 @@ class FirstScene extends BaseScene {
             point = coinPoints[i]
             this.coins.create(point.x, point.y, "Coin")
         }
+        this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this)
         // Add Layer
         this.foregroundlayer = this.map.createLayer("foreground", [landscape, sky, props, pickuplayer], 0, 0)
-        this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this)
         // Spike Damage Layer
         this.foregroundlayer.setTileIndexCallback(799, this.triggerDamage, this)
         // Exit Level Layer
-        // this.foregroundlayer.setTileIndexCallback(656, this.doorToLevel2, this)
+        this.foregroundlayer.setTileIndexCallback(656, this.exitDoor, this)
         // Collect Key item Layer
         this.foregroundlayer.setTileIndexCallback(634, this.collectKey, this)
         // Collect Speed Up Item Layer
@@ -166,6 +225,7 @@ class FirstScene extends BaseScene {
         // Debugging for TileIndex
         this.physics.add.overlap(this.player, this.foregroundlayer)
         this.physics.add.overlap(this.player, this.foregroundlayer, this.getOverlapTileIndex, null, this)
+        // Speed Up Default to False
         this.speedup = false
         // Player Animations
         this.anims.create({
@@ -197,30 +257,51 @@ class FirstScene extends BaseScene {
         this.camera.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels)
         this.camera.startFollow(this.player)
         // UI
-        this.scoreText = this.add.text(75, 16, "Score: 0", {
+        this.scoreText = this.add.text(25, 5, "Score: 0", {
             fontSize: "16px",
-            color: "#FFFFFF",
+            color: "#000000",
             fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
             fontStyle: "bold"
         }).setScrollFactor(0)
-        this.healthText = this.add.text(250, 16, "Health: 3", {
+        this.healthText = this.add.text(25, 45, "Health: 3", {
             fontSize: "16px",
-            color: "#FFFFFF",
+            color: "#000000",
             fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
             fontStyle: "bold"
         }).setScrollFactor(0)
-        this.gameOverText = this.add.text(125, 125, "", {
+        this.gameOverText = this.add.text(155, 125, "", {
             fontSize: "24px",
-            color: "#FFFFFF",
+            color: "#000000",
             fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
             fontStyle: "bold"
         }).setScrollFactor(0)
+        this.ammoText = this.add.text(25, 25, "Ammo : 10", {
+            fontSize: "16px",
+            color: "#000000",
+            fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
+            fontStyle: "bold"
+        }).setScrollFactor(0)
+        this.add.image(12, 12, "Coin").setScrollFactor(0)
+        this.pistolIcon = this.add.image(16, 32, "pistol").setScrollFactor(0)
+        this.smgIcon = this.add.image(16, 32, "smg").setScrollFactor(0)
+        this.smgIcon.setVisible(false)
+        this.shotgunIcon = this.add.image(16, 32, "shotgun").setScrollFactor(0)
+        this.shotgunIcon.setVisible(false)
+        this.add.image(12, 52, "health").setScrollFactor(0)
+        this.instructionScreen = this.add.image(225, 190, "instruction").setScrollFactor(0)
+        this.endScreen = this.add.image(225, 190, "endscreen").setScrollFactor(0)
+        this.endScreen.setVisible(false)
+        this.hasKey = this.add.image(12, 72, "keyUI").setScrollFactor(0)
+        this.hasKey.setVisible(false)
         //Assign Keys/Controls
         this.KeyW = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W)
         this.KeyA = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A)
         this.KeyS = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S)
         this.KeyD = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D)
         this.KeyEnter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER)
+        this.Key1 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ONE)
+        this.Key2 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.TWO)
+        this.Key3 = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.THREE)
         this.input.on('pointerdown', this.fireBullet, this)
         this.cursors = this.input.keyboard.createCursorKeys()
     }
@@ -229,61 +310,89 @@ class FirstScene extends BaseScene {
     update() {
         //Check arrow keys
         //Speed Active
-        if (this.speedup && !this.gameOver) {
+        if (this.speedup && !this.gameOver && this.startGame) {
             if (this.cursors.right.isDown || this.KeyD.isDown) {
                 this.player.setVelocityX(200)
                 this.player.anims.play('walk', true)
                 this.player.flipX = false
-                this.player.setOffset(7, 0);
+                this.player.setOffset(0, 0);
             } else if (this.cursors.left.isDown || this.KeyA.isDown) {
                 this.player.setVelocityX(-200)
                 this.player.anims.play('walk', true)
                 this.player.flipX = true
-                this.player.setOffset(3, 0);
+                this.player.setOffset(0, 0);
             } else {
                 this.player.setVelocityX(0)
                 this.player.anims.play('idle', true)
             }
         }
         // Speed not Active
-        if (!this.speedup && !this.gameOver) {
+        if (!this.speedup && !this.gameOver && this.startGame) {
             if (this.cursors.right.isDown || this.KeyD.isDown) {
                 this.player.setVelocityX(100)
                 this.player.anims.play('walk', true)
                 this.player.flipX = false
-                this.player.setOffset(7, 0);
+                this.player.setOffset(0, 0);
             } else if (this.cursors.left.isDown || this.KeyA.isDown) {
                 this.player.setVelocityX(-100)
                 this.player.anims.play('walk', true)
                 this.player.flipX = true
-                this.player.setOffset(3, 0);
+                this.player.setOffset(0, 0);
             } else {
                 this.player.setVelocityX(0)
                 this.player.anims.play('idle', true)
             }
         }
-        //Power Up Effects
+        //Start Game
+        if (this.KeyEnter.isDown && !this.startGame) {
+            this.instructionScreen.setVisible(false)
+            this.startGame = true
+        }
+        // Weapon Switching
+        if (this.Key1.isDown && this.startGame) {
+            this.pistolIcon.setVisible(true)
+            this.smgIcon.setVisible(false)
+            this.shotgunIcon.setVisible(false)
+            this.ammoText.setText("Ammo: " + this.pistolAmmo)
+            this.firingMode = 1
+        }
+        if (this.Key2.isDown && this.startGame) {
+            this.pistolIcon.setVisible(false)
+            this.smgIcon.setVisible(true)
+            this.shotgunIcon.setVisible(false)
+            this.ammoText.setText("Ammo: " + this.smgAmmo)
+            this.firingMode = 2
+        }
+        if (this.Key3.isDown && this.startGame) {
+            this.pistolIcon.setVisible(false)
+            this.smgIcon.setVisible(false)
+            this.shotgunIcon.setVisible(true)
+            this.ammoText.setText("Ammo: " + this.shotgunAmmo)
+            this.firingMode = 3
+        }
+        // Speed Up Effects
+        if (!this.speedup) {
+            this.player.setTint(0xffffff)
+        }
         if (this.speedup) {
             this.player.setTint(0x33FFFF)
         }
-        if (!this.speedup) {
-            this.player.setTint(0xFFFFFF)
-        }
-        //Check for space bar press
+        // Check for space bar press
         if (Phaser.Input.Keyboard.JustDown(this.cursors.space) && this.player.jumpCount < 1 && !this.gameOver) {
             this.player.jumpCount++;
             this.player.setVelocityY(-200);
         }
-        //Reset jumpCount. Important for double jumping.
+        // Reset jumpCount. Important for double jumping.
         if (this.player.body.touching.down || this.player.body.blocked.down) {
             this.player.jumpCount = 0
         }
-        //Display jumping or falling animations
+        // Display jumping or falling animations
         if (this.player.body.velocity.y < 0) {
             this.player.anims.play('jump', true);
         } else if (this.player.body.velocity.y > 0) {
             this.player.anims.play('fall', true);
         }
+        // Game Over
         if (this.health <= 0) {
             this.gameOver = true
             this.physics.pause()
@@ -301,12 +410,38 @@ class FirstScene extends BaseScene {
     // Debugging Purposes for foreground tiles
     getOverlapTileIndex(player, tile) {
         console.log(tile.index)
-
+    }
+    // Collect Ammo
+    collectPistolAmmo(player, pistolAmmoBox) {
+        pistolAmmoBox.disableBody(true, true)
+        this.pistolAmmo += 5
+        if (this.firingMode == 1){
+            this.ammoText.setText("Ammo: " + this.pistolAmmo)
+        }
+        
+    }
+    collectSmgAmmo(player, smgAmmoBox) {
+        smgAmmoBox.disableBody(true, true)
+        this.smgAmmo += 5
+        if (this.firingMode == 2){
+            this.ammoText.setText("Ammo: " + this.smgAmmo)
+        }
+        
+    }
+    collectShotgunAmmo(player, shotgunAmmoBox) {
+        shotgunAmmoBox.disableBody(true, true)
+        this.shotgunAmmo += 5
+        if (this.firingMode == 3){
+            console.log("Hello")
+            this.ammoText.setText("Ammo: " + this.shotgunAmmo)
+        }
+        
     }
     // Collect Key
     collectKey(player, tile) {
         this.foregroundlayer.removeTileAt(tile.x, tile.y)
         this.keyCollected = true
+        this.hasKey.setVisible(true)
     }
     // Add Health
     gainHealth(player, tile) {
@@ -320,19 +455,30 @@ class FirstScene extends BaseScene {
     // Fire Bullets
     fireBullet() {
         let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
-        if (bulletPlayer && !this.player.flipX) {
+        // Fire Right
+        if (bulletPlayer && !this.player.flipX && this.pistolAmmo >= 1 && this.startGame) {
+            bulletPlayer.enableBody(false)
             bulletPlayer.setActive(true);
             bulletPlayer.setVisible(true);
-            this.physics.velocityFromRotation(bulletPlayer.rotation, 100, bulletPlayer.body.velocity);
+            this.physics.velocityFromRotation(bulletPlayer.rotation, 200, bulletPlayer.body.velocity);
+            this.pistolAmmo -= 1
+            this.ammoText.setText("Ammo: " + this.pistolAmmo)
             bulletPlayer.body.onWorldBounds = true;
             bulletPlayer.body.allowGravity = false
-        } else {
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 500);
+            
+            // Fire Left    
+        } else if (this.pistolAmmo >= 1 && this.startGame) {
+            bulletPlayer.enableBody(false)
             bulletPlayer.setActive(true);
             bulletPlayer.setVisible(true);
-            this.physics.velocityFromRotation(bulletPlayer.rotation, -100, bulletPlayer.body.velocity);
+            this.physics.velocityFromRotation(bulletPlayer.rotation, -200, bulletPlayer.body.velocity);
+            this.pistolAmmo -= 1
+            this.ammoText.setText("Ammo: " + this.pistolAmmo)
             bulletPlayer.body.onWorldBounds = true;
             bulletPlayer.body.allowGravity = false
-
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 500);
+            
         }
     }
     // Decrease Health
@@ -355,26 +501,32 @@ class FirstScene extends BaseScene {
     }
     // Destory Enemies
     destoryNormalEnemy(bulletPlayer, normalEnemies) {
+        bulletPlayer.disableBody(true, true)
         this.bulletsPlayer.killAndHide(bulletPlayer)
         this.normalEnemies.remove(normalEnemies, true, true)
     }
     destoryFlyingEnemy(bulletPlayer, flyingEnemies) {
+        bulletPlayer.disableBody(true, true)
         this.bulletsPlayer.killAndHide(bulletPlayer)
         this.flyingEnemies.remove(flyingEnemies, true, true)
     }
     // Destory Bullet on Platform
     destoryBulletCollide(bulletPlayer, collisionLayer) {
-        this.bulletsPlayer.killAndHide(bulletPlayer)
+        bulletPlayer.disableBody(true, true)
     }
     // Destory Bullet on World Bound
     worldBoundsBullet(body) {
-        this.bulletsPlayer.killAndHide(body.gameObject)
+        body.gameObject.disableBody(true, true)
     }
-    // doorToLevel2() {
-    //     if (this.KeyEnter.isDown)
-    //         setTimeout(() => { this.scene.start("Scene2", { score: this.score, health: this.health }) }, 100);
-    // }
-
+    // Level Complete
+    exitDoor() {
+        if (this.KeyEnter.isDown && this.keyCollected) {
+            this.gameOver = true
+            this.endScreen.setVisible(true)
+            this.hasKey.setVisible(false)
+            this.keyCollected = false
+        }
+    }
     // Spawn Objects on Point
     static FindPoint(map, layer, type, name) {
         var loc = map.findObject(layer, function (object) {
@@ -392,6 +544,4 @@ class FirstScene extends BaseScene {
         })
         return locs
     }
-
-
 }
