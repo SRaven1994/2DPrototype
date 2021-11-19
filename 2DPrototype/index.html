@@ -7,7 +7,6 @@
     <script src="js/CustomSprite.js"></script>
     <script src="js/BaseScene.js"></script>
     <script src="js/FirstScene.js"></script>
-    <script src="js/SecondScene.js"></script>
     <style type="text/css">
         body {
             margin: 0;
@@ -32,10 +31,10 @@
                     gravity: {
                         y: 300
                     },
-                    debug: true
+                    debug: false
                 }
             },
-            scene: [FirstScene, SecondScene]
+            scene: [FirstScene]
         };
         let game = new Phaser.Game(config)
     </script>

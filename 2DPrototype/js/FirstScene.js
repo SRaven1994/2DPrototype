@@ -46,7 +46,7 @@ class FirstScene extends BaseScene {
     /** @type {Phaser.GameObjects.Image} */
     shotgunIcon
     /** @type {number}*/
-    pistolAmmo = 10
+    pistolAmmo = 25
     /** @type {number}*/
     smgAmmo = 0
     /** @type {number}*/
@@ -222,9 +222,10 @@ class FirstScene extends BaseScene {
         this.foregroundlayer.setTileIndexCallback(466, this.gainSpeedUp, this)
         // Collect Health Item Layer
         this.foregroundlayer.setTileIndexCallback(467, this.gainHealth, this)
-        // Debugging for TileIndex
+        // Foreground Layer Overlap
         this.physics.add.overlap(this.player, this.foregroundlayer)
-        this.physics.add.overlap(this.player, this.foregroundlayer, this.getOverlapTileIndex, null, this)
+        // Debugging for TileIndex
+        // this.physics.add.overlap(this.player, this.foregroundlayer, this.getOverlapTileIndex, null, this)
         // Speed Up Default to False
         this.speedup = false
         // Player Animations
@@ -275,7 +276,7 @@ class FirstScene extends BaseScene {
             fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
             fontStyle: "bold"
         }).setScrollFactor(0)
-        this.ammoText = this.add.text(25, 25, "Ammo : 10", {
+        this.ammoText = this.add.text(25, 25, "Ammo : 25", {
             fontSize: "16px",
             color: "#000000",
             fontFamily: 'Georgia, "Goudy Bookletter 1911", Times, serif',
@@ -370,15 +371,8 @@ class FirstScene extends BaseScene {
             this.ammoText.setText("Ammo: " + this.shotgunAmmo)
             this.firingMode = 3
         }
-        // Speed Up Effects
-        if (!this.speedup) {
-            this.player.setTint(0xffffff)
-        }
-        if (this.speedup) {
-            this.player.setTint(0x33FFFF)
-        }
         // Check for space bar press
-        if (Phaser.Input.Keyboard.JustDown(this.cursors.space) && this.player.jumpCount < 1 && !this.gameOver) {
+        if (Phaser.Input.Keyboard.JustDown(this.cursors.space) && this.player.jumpCount < 1 && !this.gameOver && this.startGame) {
             this.player.jumpCount++;
             this.player.setVelocityY(-200);
         }
@@ -414,7 +408,7 @@ class FirstScene extends BaseScene {
     // Collect Ammo
     collectPistolAmmo(player, pistolAmmoBox) {
         pistolAmmoBox.disableBody(true, true)
-        this.pistolAmmo += 5
+        this.pistolAmmo += 10
         if (this.firingMode == 1){
             this.ammoText.setText("Ammo: " + this.pistolAmmo)
         }
@@ -422,7 +416,7 @@ class FirstScene extends BaseScene {
     }
     collectSmgAmmo(player, smgAmmoBox) {
         smgAmmoBox.disableBody(true, true)
-        this.smgAmmo += 5
+        this.smgAmmo += 20
         if (this.firingMode == 2){
             this.ammoText.setText("Ammo: " + this.smgAmmo)
         }
@@ -432,7 +426,6 @@ class FirstScene extends BaseScene {
         shotgunAmmoBox.disableBody(true, true)
         this.shotgunAmmo += 5
         if (this.firingMode == 3){
-            console.log("Hello")
             this.ammoText.setText("Ammo: " + this.shotgunAmmo)
         }
         
@@ -455,31 +448,87 @@ class FirstScene extends BaseScene {
     // Fire Bullets
     fireBullet() {
         let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
-        // Fire Right
-        if (bulletPlayer && !this.player.flipX && this.pistolAmmo >= 1 && this.startGame) {
+        // Fire Right (Pistol)
+        if (bulletPlayer && !this.player.flipX && this.pistolAmmo >= 1 && this.firingMode == 1 && this.startGame) {
             bulletPlayer.enableBody(false)
             bulletPlayer.setActive(true);
             bulletPlayer.setVisible(true);
-            this.physics.velocityFromRotation(bulletPlayer.rotation, 200, bulletPlayer.body.velocity);
+            this.physics.velocityFromRotation(bulletPlayer.rotation = 0, 175, bulletPlayer.body.velocity);
             this.pistolAmmo -= 1
             this.ammoText.setText("Ammo: " + this.pistolAmmo)
             bulletPlayer.body.onWorldBounds = true;
             bulletPlayer.body.allowGravity = false
-            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 500);
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 750);
             
-            // Fire Left    
-        } else if (this.pistolAmmo >= 1 && this.startGame) {
+        // Fire Left (Pistol)    
+        } else if (this.pistolAmmo >= 1 && this.firingMode == 1 && this.startGame) {
             bulletPlayer.enableBody(false)
             bulletPlayer.setActive(true);
             bulletPlayer.setVisible(true);
-            this.physics.velocityFromRotation(bulletPlayer.rotation, -200, bulletPlayer.body.velocity);
+            this.physics.velocityFromRotation(bulletPlayer.rotation = 0, -175, bulletPlayer.body.velocity);
             this.pistolAmmo -= 1
             this.ammoText.setText("Ammo: " + this.pistolAmmo)
             bulletPlayer.body.onWorldBounds = true;
             bulletPlayer.body.allowGravity = false
-            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 500);
-            
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 750);
+        // Fire Right (smg)
+        } else if (bulletPlayer && !this.player.flipX && this.smgAmmo >= 1 && this.firingMode == 2 && this.startGame){
+            for (let i = 0; i < 10; i++){
+                let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
+                bulletPlayer.enableBody(false)
+                bulletPlayer.setActive(true);
+                bulletPlayer.setVisible(true);
+                this.physics.velocityFromRotation(bulletPlayer.rotation = 0, 350, bulletPlayer.body.velocity);
+            }
+            this.smgAmmo -= 1
+            this.ammoText.setText("Ammo: " + this.smgAmmo)
+            bulletPlayer.body.onWorldBounds = true;
+            bulletPlayer.body.allowGravity = false
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 50);
+        // Fire Left (smg) 
+        } else if (this.smgAmmo >= 1 && this.firingMode == 2 && this.startGame){
+            for (let i = 0; i < 10; i++){
+                let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
+                bulletPlayer.enableBody(false)
+                bulletPlayer.setActive(true);
+                bulletPlayer.setVisible(true);
+                this.physics.velocityFromRotation(bulletPlayer.rotation = 0, -350, bulletPlayer.body.velocity);
+            }
+            this.smgAmmo -= 1
+            this.ammoText.setText("Ammo: " + this.smgAmmo)
+            bulletPlayer.body.onWorldBounds = true;
+            bulletPlayer.body.allowGravity = false
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 150);
+        // Fire Right (Shotgun)
+        } else if (bulletPlayer && !this.player.flipX && this.shotgunAmmo >= 1 && this.firingMode == 3 && this.startGame){
+            for (let i = 0; i < 10; i++){
+                let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
+                bulletPlayer.enableBody(false)
+                bulletPlayer.setActive(true);
+                bulletPlayer.setVisible(true);
+                this.physics.velocityFromRotation(bulletPlayer.rotation = Phaser.Math.Between(-13, -12.80), 150, bulletPlayer.body.velocity);  
+            }
+            this.shotgunAmmo -= 1           
+            this.ammoText.setText("Ammo: " + this.shotgunAmmo)
+            bulletPlayer.body.onWorldBounds = true;
+            bulletPlayer.body.allowGravity = false
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 200);
+        // Fire Left (Shotgun) 
+        } else if (this.shotgunAmmo >= 1 && this.firingMode == 3 && this.startGame){
+            for (let i = 0; i < 10; i++){
+                let bulletPlayer = this.bulletsPlayer.get(this.player.x, this.player.y)
+                bulletPlayer.enableBody(false)
+                bulletPlayer.setActive(true);
+                bulletPlayer.setVisible(true);
+                this.physics.velocityFromRotation(bulletPlayer.rotation = Phaser.Math.Between(12.80, 13), -150, bulletPlayer.body.velocity);  
+            }
+            this.shotgunAmmo -= 1
+            this.ammoText.setText("Ammo: " + this.shotgunAmmo)
+            bulletPlayer.body.onWorldBounds = true;
+            bulletPlayer.body.allowGravity = false
+            setTimeout(() => { bulletPlayer.body.allowGravity = true }, 200);
         }
+
     }
     // Decrease Health
     triggerDamage(player, tile) {
@@ -487,7 +536,8 @@ class FirstScene extends BaseScene {
             this.health -= 1
             this.healthText.setText("Health: " + this.health)
             this.player.takeDamage = true
-            setTimeout(() => { this.player.takeDamage = false }, 1000);
+            this.player.setTint(0xFF0000)
+            setTimeout(() => { this.player.takeDamage = false, this.player.setTint(0xffffff) }, 1000);
         }
     }
     // Enable Speed Up
@@ -495,7 +545,7 @@ class FirstScene extends BaseScene {
         if (!this.speedup) {
             this.foregroundlayer.removeTileAt(tile.x, tile.y)
             this.speedup = true
-            setTimeout(() => { this.speedup = false }, 5000);
+            setTimeout(() => { this.speedup = false}, 5000);
         }
 
     }
